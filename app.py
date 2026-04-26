@@ -263,7 +263,8 @@ with st.sidebar:
     env_models_raw = os.getenv("GEMINI_MODELS", "").strip()
     
     if not env_models_raw:
-        available_models = ["gemini-1.5-flash", "gemini-1.5-pro"]
+        # Default models (Streamlit Cloud uses Secrets, not .env)
+        available_models = ["gemini-2.0-flash-lite-preview-02-05", "gemini-1.5-flash", "gemini-1.5-pro"]
     elif env_models_raw.startswith("[") and env_models_raw.endswith("]"):
         try:
             available_models = json.loads(env_models_raw)
