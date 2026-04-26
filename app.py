@@ -260,12 +260,19 @@ with st.sidebar:
     conf_token = os.getenv("CONFLUENCE_TOKEN", "")
 
     # Load model list from env
-    env_models_raw = os.getenv(
-        "GEMINI_MODELS", '["gemini-1.5-flash", "gemini-1.5-pro"]'
-    )
-    try:
-        available_models = json.loads(env_models_raw)
-    except Exception:
+    env_models_raw = os.getenv("GEMINI_MODELS", "").strip()
+    
+    if not env_models_raw:
+        available_models = ["gemini-1.5-flash", "gemini-1.5-pro"]
+    elif env_models_raw.startswith("[") and env_models_raw.endswith("]"):
+        try:
+            available_models = json.loads(env_models_raw)
+        except Exception:
+            # Manual fallback for malformed JSON lists
+            inner = env_models_raw[1:-1]
+            available_models = [m.strip().strip('"').strip("'") for m in inner.split(",")]
+    else:
+        # Simple comma-separated list
         available_models = [m.strip() for m in env_models_raw.split(",")]
 
     env_default_model = os.getenv(
