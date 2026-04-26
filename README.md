@@ -4,14 +4,14 @@ A Python project for Jira review specifications.
 
 ## Project Structure
 
-- `/agent-conversation/`: Logs of AI agent activities.
+- `/app-log/`: Logs of AI review activities.
 - `skill.md`: Operational rules and AI instructions.
 
 ## Development Rules
 
 1. **Always read `skill.md`** before starting work.
 2. **Lint and Test** before every commit/submission.
-3. **Log every session** in `/agent-conversation/`.
+3. **Log every session** in `/app-log/`.
 
 ## Setup
 
@@ -75,5 +75,5 @@ streamlit run app.py
 - `app.py`: Streamlit UI.
 - `orchestrator.py`: LLM process logic.
 - `utils.py`: Markdown parsing utilities.
-- `/agent-conversation/`: Logs of AI agent activities.
+- `/app-log/`: Logs of AI review activities.
 - `skill.md`: Operational rules and AI instructions.

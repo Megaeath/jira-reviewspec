@@ -3,9 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# agent conversation log
+# app conversation log
 review/
-agent-conversation/
+app-log/
 agent-history/
 
 # C extensions
