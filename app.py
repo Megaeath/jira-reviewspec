@@ -282,7 +282,10 @@ with st.sidebar:
     if st.button("🔄 Reload Prompts from File"):
         try:
             st.session_state["prompts"] = parse_prompts("prompt.md")
-            st.success("Prompts reloaded!")
+            st.session_state["rubrics"] = parse_rubrics("rovo-prompt.md")
+            with open("rovo-prompt-optimized.md", "r", encoding="utf-8") as f:
+                st.session_state["single_prompt"] = f.read()
+            st.success("Prompts & Rubrics reloaded!")
             st.rerun()
         except Exception as e:
             st.error(f"Error: {e}")
@@ -293,10 +296,24 @@ with st.sidebar:
 # Main Prompt Configuration
 with st.expander("📝 Prompt Configuration (Edit to test)"):
     st.info("คุณสามารถแก้ไข Prompt เหล่านี้เพื่อทดสอบประสิทธิภาพได้ทันที")
+    
+    st.markdown("### 🔄 Orchestrated Mode Prompts")
     for i in range(1, 6):
         st.session_state["prompts"][i] = st.text_area(
-            f"Prompt {i}", value=st.session_state["prompts"].get(i, ""), height=200
+            f"Step {i}: {st.session_state['prompts'].get(i, '').split('\\n')[0][:50]}...", 
+            value=st.session_state["prompts"].get(i, ""), 
+            height=150,
+            key=f"p_{i}"
         )
+    
+    st.divider()
+    st.markdown("### ⚡ Single Request Mode Prompt (Rovo Style)")
+    st.session_state["single_prompt"] = st.text_area(
+        "Optimized Rovo Prompt",
+        value=st.session_state.get("single_prompt", ""),
+        height=400,
+        key="p_single"
+    )
 
 # Input Section
 tab1, tab2, tab3 = st.tabs(["🔄 Orchestrated Review", "✍️ Direct Text Input", "⚡ Single Request (Rovo Style)"])
