@@ -14,152 +14,178 @@ st.set_page_config(page_title="AI Spec Review POC", layout="wide", initial_sideb
 def apply_premium_styling():
     st.markdown("""
         <style>
-        /* Import Google Font */
-        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+        /* Import Fonts */
+        @import url('https://api.fontshare.com/v2/css?f[]=general-sans@700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=JetBrains+Mono&display=swap');
 
-        /* Global Typography and Background */
+        /* Global Styles */
         html, body, [class*="css"] {
-            font-family: 'Sarabun', sans-serif !important;
+            font-family: 'DM Sans', sans-serif !important;
+            color: #0A0A0A !important;
         }
 
         .stApp {
-            background: #ffffff;
-            color: #1e293b;
+            background-color: #FAFAFA !important;
         }
+
+        /* Typography */
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'General Sans', sans-serif !important;
+            font-weight: 700 !important;
+            color: #0A0A0A !important;
+            letter-spacing: -0.03em !important;
+            background: none !important;
+            -webkit-text-fill-color: initial !important;
+        }
+
+        h1 { font-size: 60px !important; }
+        h2 { font-size: 32px !important; }
+        h3 { font-size: 24px !important; }
 
         /* Sidebar */
         [data-testid="stSidebar"] {
-            background: #f8fafc !important;
-            border-right: 1px solid #e2e8f0;
+            background-color: #FFFFFF !important;
+            border-right: 1px solid #E8E8EC !important;
         }
 
-        /* Primary Button Styling */
+        /* Buttons */
         .stButton > button {
-            background: linear-gradient(90deg, #2563eb 0%, #4f46e5 100%) !important;
-            color: white !important;
+            background-color: #6366F1 !important;
+            color: #FFFFFF !important;
             border: none !important;
-            border-radius: 8px !important;
-            padding: 0.6rem 1.2rem !important;
-            font-weight: 600 !important;
-            transition: all 0.3s ease !important;
-            box-shadow: 0 4px 14px 0 rgba(79, 70, 229, 0.25) !important;
+            border-radius: 6px !important;
+            padding: 10px 16px !important;
+            font-family: 'DM Sans', sans-serif !important;
+            font-weight: 500 !important;
+            font-size: 15px !important;
+            transition: all 200ms ease !important;
+            box-shadow: none !important;
             width: 100% !important;
         }
 
         .stButton > button:hover {
+            background-color: #4F46E5 !important;
             transform: translateY(-2px) !important;
-            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4) !important;
+            box-shadow: 0 4px 12px rgba(99,102,241,0.35) !important;
         }
 
-        /* Text Inputs and Text Areas */
+        .stButton > button:active {
+            transform: translateY(0px) !important;
+        }
+
+        /* Inputs & Textareas */
         .stTextInput > div > div > input, .stTextArea > div > div > textarea {
-            background-color: #ffffff !important;
-            border: 1px solid #cbd5e1 !important;
-            color: #1e293b !important;
-            border-radius: 8px !important;
-            transition: all 0.3s ease !important;
-            padding: 0.75rem !important;
-            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+            background-color: #FFFFFF !important;
+            border: 1px solid #E8E8EC !important;
+            color: #0A0A0A !important;
+            border-radius: 6px !important;
+            padding: 10px 14px !important;
+            font-size: 14px !important;
+            transition: all 200ms ease !important;
         }
 
         .stTextInput > div > div > input:focus, .stTextArea > div > div > textarea:focus {
-            border-color: #4f46e5 !important;
-            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2) !important;
+            border-color: #6366F1 !important;
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.12) !important;
         }
 
-        /* Expander and Tabs */
+        /* Cards / Expanders */
         .streamlit-expanderHeader {
-            background-color: #f1f5f9 !important;
+            background-color: #FFFFFF !important;
             border-radius: 8px !important;
-            border: 1px solid #e2e8f0 !important;
-            color: #334155 !important;
-            font-weight: 600 !important;
+            border: 1px solid #E8E8EC !important;
+            color: #0A0A0A !important;
+            font-family: 'DM Sans', sans-serif !important;
+            font-weight: 500 !important;
         }
 
         .streamlit-expanderContent {
-            border: 1px solid #e2e8f0 !important;
+            border: 1px solid #E8E8EC !important;
             border-top: none !important;
             border-radius: 0 0 8px 8px !important;
-            background-color: #ffffff !important;
+            background-color: #FFFFFF !important;
+        }
+
+        /* Tabs */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 16px;
+            background-color: transparent;
+            border-bottom: 1px solid #E8E8EC;
+        }
+
+        .stTabs [data-baseweb="tab"] {
+            font-family: 'DM Sans', sans-serif !important;
+            font-weight: 500 !important;
+            font-size: 14px !important;
+            color: #6B6B6B !important;
+            background-color: transparent !important;
+            border: none !important;
+            padding: 12px 0 !important;
+        }
+
+        .stTabs [aria-selected="true"] {
+            color: #6366F1 !important;
+            border-bottom: 2px solid #6366F1 !important;
         }
 
         /* DataFrames / Tables */
         [data-testid="stTable"], [data-testid="stDataFrame"] {
-            background-color: #ffffff !important;
+            background-color: #FFFFFF !important;
             border-radius: 12px !important;
-            overflow: hidden !important;
-            border: 1px solid #e2e8f0 !important;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            border: 1px solid #E8E8EC !important;
+            padding: 8px !important;
         }
 
         th {
-            background-color: #f8fafc !important;
-            color: #475569 !important;
-            font-weight: 600 !important;
-            border-bottom: 2px solid #e2e8f0 !important;
+            background-color: #FAFAFA !important;
+            color: #6B6B6B !important;
+            font-weight: 500 !important;
+            border-bottom: 1px solid #E8E8EC !important;
+            text-transform: uppercase;
+            font-size: 11px !important;
+            letter-spacing: 0.05em;
         }
 
         td {
-            border-bottom: 1px solid #f1f5f9 !important;
-            color: #334155 !important;
+            border-bottom: 1px solid #FAFAFA !important;
+            color: #0A0A0A !important;
+            font-size: 14px !important;
         }
 
-        /* Headers with Gradient */
-        h1, h2, h3 {
-            background: -webkit-linear-gradient(45deg, #1d4ed8, #4f46e5);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: 700 !important;
-            letter-spacing: -0.02em;
+        /* Code Blocks */
+        code {
+            font-family: 'JetBrains Mono', monospace !important;
+            background-color: #F1F1F4 !important;
+            border-radius: 4px !important;
+            padding: 2px 4px !important;
         }
 
-        /* Tabs styling */
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 8px;
-            background-color: transparent;
+        /* Custom Genesis Card */
+        .genesis-card {
+            background-color: #FFFFFF;
+            border: 1px solid #E8E8EC;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            transition: all 200ms ease;
         }
 
-        .stTabs [data-baseweb="tab"] {
-            height: 40px;
-            white-space: pre-wrap;
-            background-color: #f8fafc;
-            border-radius: 8px 8px 0 0;
-            gap: 1px;
-            padding-top: 10px;
-            padding-bottom: 10px;
-            border: 1px solid #e2e8f0;
-            border-bottom: none;
-            color: #64748b;
+        .genesis-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
         }
 
-        .stTabs [aria-selected="true"] {
-            background-color: #eff6ff;
-            color: #2563eb !important;
-            border-bottom: 2px solid #2563eb !important;
-            font-weight: 600;
-        }
-
-        /* Labels */
-        .stTextInput[data-testid="stTextInput"] label p, .stTextArea label p {
-            font-weight: 500;
-            color: #475569;
-        }
-
-        hr {
-            border-color: #e2e8f0 !important;
-        }
-        
-        /* Spinner */
+        /* Custom Loader */
         .stSpinner > div > div {
-            border-top-color: #4f46e5 !important;
+            border-top-color: #6366F1 !important;
         }
         </style>
     """, unsafe_allow_html=True)
 
 apply_premium_styling()
 
-st.title("🛡️ AI Spec Review POC")
-st.markdown("ระบบรีวิวเอกสาร Spec เปรียบเทียบประสิทธิภาพกับ Atlassian Rovo")
+st.title("🛡️ AI Spec Review")
+st.markdown('<p style="font-family: \'DM Sans\'; color: #6B6B6B; font-size: 18px; margin-top: -20px;">Editorial Precision Interface by <span style="color: #20970B; font-weight: 700;">DESIGN.md</span></p>', unsafe_allow_html=True)
 
 # --- Authentication Logic ---
 def check_password():
@@ -178,14 +204,20 @@ def check_password():
 
     if "password_correct" not in st.session_state:
         # First run, show inputs for username + password.
+        st.markdown('<div class="genesis-card" style="max-width: 400px; margin: 100px auto;">', unsafe_allow_html=True)
+        st.subheader("Welcome Back")
         st.text_input("Username", on_change=password_entered, key="username")
         st.text_input("Password", type="password", on_change=password_entered, key="password")
+        st.markdown('</div>', unsafe_allow_html=True)
         return False
     elif not st.session_state["password_correct"]:
         # Password not correct, show input + error.
+        st.markdown('<div class="genesis-card" style="max-width: 400px; margin: 100px auto;">', unsafe_allow_html=True)
+        st.subheader("Welcome Back")
         st.text_input("Username", on_change=password_entered, key="username")
         st.text_input("Password", type="password", on_change=password_entered, key="password")
         st.error("😕 User not known or password incorrect")
+        st.markdown('</div>', unsafe_allow_html=True)
         return False
     else:
         # Password correct.
@@ -445,6 +477,7 @@ if "review_result" in st.session_state:
     res = st.session_state["review_result"]
 
     # 1. Summary
+    st.markdown('<div class="genesis-card">', unsafe_allow_html=True)
     st.header("1. Summary")
     summary = res.get("summary", {})
     col1, col2 = st.columns(2)
@@ -462,18 +495,23 @@ if "review_result" in st.session_state:
     st.subheader("จุดที่ควรปรับปรุง (Improvements)")
     for i in summary.get("improvements", []):
         st.markdown(f"- {i}")
+    st.markdown('</div>', unsafe_allow_html=True)
 
     # 2. Topic Review
+    st.markdown('<div class="genesis-card">', unsafe_allow_html=True)
     st.header("2. Topic Review")
     topic_df = pd.DataFrame(res.get("topic_review_table", []))
     if not topic_df.empty:
         st.table(topic_df)
+    st.markdown('</div>', unsafe_allow_html=True)
 
     # 3. Scenario Coverage
+    st.markdown('<div class="genesis-card">', unsafe_allow_html=True)
     st.header("3. Scenario Coverage")
     scenario_df = pd.DataFrame(res.get("scenario_coverage_table", []))
     if not scenario_df.empty:
         st.table(scenario_df)
+    st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("---")
     st.caption(res.get("signature", "generated by AI Spec Review"))
