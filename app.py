@@ -344,24 +344,6 @@ with tab3:
             st.session_state["active_text"] = ""
             st.session_state["show_dialog"] = True
 
-# Handle dialog trigger
-if st.session_state.get("show_dialog"):
-    # Clear the flag so it doesn't loop
-    st.session_state["show_dialog"] = False
-    
-    # Check dependencies
-    if not api_key:
-        st.error("Missing Gemini API Key!")
-    else:
-        # Call the dialog
-        conf_creds = (conf_url, conf_user, conf_token)
-        mode = st.session_state.get("review_mode", "orchestrated")
-        url = st.session_state.get("active_url", "")
-        text = st.session_state.get("active_text", "")
-        
-        # We need to call the dialog function.
-        show_review_dialog(api_key, model_name, url, text, conf_creds, mode)
-
 @st.dialog("⚙️ กระบวนการรีวิว (AI Spec Review)", width="large")
 def show_review_dialog(api_key, model_name, confluence_url, spec_content, conf_creds, mode="orchestrated"):
     # Inject JS (omitted for brevity in prompt but I should keep it)
@@ -484,7 +466,8 @@ def show_review_dialog(api_key, model_name, confluence_url, spec_content, conf_c
     except Exception as e:
         st.error(f"เกิดข้อผิดพลาดระหว่างการรีวิว: {e}")
             
-        loader_placeholder.empty()
+        if 'loader_placeholder' in locals():
+            loader_placeholder.empty()
 
     finally:
         # Clear the unload blocker and click blocker
@@ -500,6 +483,24 @@ def show_review_dialog(api_key, model_name, confluence_url, spec_content, conf_c
                 }
             </script>
         """, height=0)
+
+# Handle dialog trigger
+if st.session_state.get("show_dialog"):
+    # Clear the flag so it doesn't loop
+    st.session_state["show_dialog"] = False
+    
+    # Check dependencies
+    if not api_key:
+        st.error("Missing Gemini API Key!")
+    else:
+        # Call the dialog
+        conf_creds = (conf_url, conf_user, conf_token)
+        mode = st.session_state.get("review_mode", "orchestrated")
+        url = st.session_state.get("active_url", "")
+        text = st.session_state.get("active_text", "")
+        
+        # Call the dialog function
+        show_review_dialog(api_key, model_name, url, text, conf_creds, mode)
 
 # Display Results
 if "review_result" in st.session_state:
