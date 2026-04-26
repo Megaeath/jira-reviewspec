@@ -431,6 +431,7 @@ def show_review_dialog(api_key, model_name, confluence_url, spec_content, conf_c
         st.session_state["review_result"] = result
 
         # Save log
+        os.makedirs("agent-conversation", exist_ok=True)
         timestamp = datetime.datetime.now().strftime("%d%m%Y-%H%M%S")
         log_filename = f"agent-conversation/review-{timestamp}"
         with open(log_filename, "w", encoding="utf-8") as f:
