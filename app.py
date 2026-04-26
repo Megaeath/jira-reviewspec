@@ -430,18 +430,21 @@ def show_review_dialog(api_key, model_name, confluence_url, spec_content, conf_c
 
         st.session_state["review_result"] = result
 
-        # Save log
-        os.makedirs("app-log", exist_ok=True)
-        timestamp = datetime.datetime.now().strftime("%d%m%Y-%H%M%S")
-        log_filename = f"app-log/review-{timestamp}"
-        with open(log_filename, "w", encoding="utf-8") as f:
-            f.write(f"# Review Session Log - {timestamp}\n\n")
-            f.write("## Input Spec Content:\n")
-            f.write(spec_content[:500] + "...\n\n")
-            f.write("## Review Result:\n")
-            f.write(json.dumps(result, indent=2, ensure_ascii=False))
-
-        st.success(f"การรีวิวเสร็จสมบูรณ์! กำลังปิดหน้าต่างเพื่อแสดงผลลัพธ์... (Log: {log_filename})")
+        # Save log if in dev environment
+        app_env = os.getenv("APP_ENV", "dev")
+        if app_env == "dev":
+            os.makedirs("app-log", exist_ok=True)
+            timestamp = datetime.datetime.now().strftime("%d%m%Y-%H%M%S")
+            log_filename = f"app-log/review-{timestamp}"
+            with open(log_filename, "w", encoding="utf-8") as f:
+                f.write(f"# Review Session Log - {timestamp}\n\n")
+                f.write("## Input Spec Content:\n")
+                f.write(spec_content[:500] + "...\n\n")
+                f.write("## Review Result:\n")
+                f.write(json.dumps(result, indent=2, ensure_ascii=False))
+            st.success(f"การรีวิวเสร็จสมบูรณ์! กำลังปิดหน้าต่างเพื่อแสดงผลลัพธ์... (Log: {log_filename})")
+        else:
+            st.success(f"การรีวิวเสร็จสมบูรณ์! กำลังปิดหน้าต่างเพื่อแสดงผลลัพธ์...")
         import time
         time.sleep(2)
         st.rerun()

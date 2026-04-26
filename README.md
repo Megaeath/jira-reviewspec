@@ -40,6 +40,7 @@ A Python project for Jira review specifications.
    CONFLUENCE_TOKEN=your_atlassian_api_token
    APP_USERNAME=admin
    APP_PASSWORD=password123
+   APP_ENV=dev
    ```
 
 ## Running the POC
@@ -68,6 +69,7 @@ streamlit run app.py
    CONFLUENCE_TOKEN = "your_atlassian_api_token"
    APP_USERNAME = "admin"
    APP_PASSWORD = "password123"
+   APP_ENV = "prod"
    ```
 
 ## Project Structure
