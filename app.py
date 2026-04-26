@@ -242,6 +242,13 @@ if "rubrics" not in st.session_state:
         st.error(f"Error loading rovo-prompt.md: {e}")
         st.session_state["rubrics"] = {}
 
+if "single_prompt" not in st.session_state:
+    try:
+        with open("rovo-prompt-optimized.md", "r", encoding="utf-8") as f:
+            st.session_state["single_prompt"] = f.read()
+    except Exception as e:
+        st.session_state["single_prompt"] = ""
+
 # Sidebar for configuration
 with st.sidebar:
     st.header("⚙️ Configuration")
@@ -292,30 +299,78 @@ with st.expander("📝 Prompt Configuration (Edit to test)"):
         )
 
 # Input Section
-tab1, tab2 = st.tabs(["Fetch from Confluence", "Direct Text Input"])
+tab1, tab2, tab3 = st.tabs(["🔄 Orchestrated Review", "✍️ Direct Text Input", "⚡ Single Request (Rovo Style)"])
+
+review_mode = "orchestrated"
+confluence_url = ""
+spec_input = ""
 
 with tab1:
-    confluence_url = st.text_input("Confluence Page URL", placeholder="https://your-domain.atlassian.net/wiki/spaces/.../pages/12345")
-    st.info("💡 เมื่อกดปุ่ม 'เริ่มการรีวิว' ด้านล่าง ระบบจะดึงข้อมูลจาก Confluence ให้อัตโนมัติ")
+    confluence_url = st.text_input("Confluence Page URL", placeholder="https://your-domain.atlassian.net/wiki/spaces/.../pages/12345", key="conf_url_1")
+    st.info("💡 โหมดนี้จะใช้ AI หลายตัวทำงานร่วมกัน (Multi-Agent) เพื่อความละเอียดสูงสุด")
+    if st.button("🚀 เริ่มการรีวิว (Orchestrated)", key="btn_orch", use_container_width=True):
+        if not confluence_url:
+            st.error("กรุณาระบุ Confluence Page URL")
+        else:
+            review_mode = "orchestrated"
+            st.session_state["review_mode"] = "orchestrated"
+            st.session_state["active_url"] = confluence_url
+            st.session_state["active_text"] = ""
+            st.session_state["show_dialog"] = True
 
 with tab2:
-    spec_input = st.text_area("วางเนื้อหา Spec ที่ต้องการรีวิว (Text Only)", height=300)
+    spec_input = st.text_area("วางเนื้อหา Spec ที่ต้องการรีวิว (Text Only)", height=300, key="text_input_2")
+    st.info("💡 โหมดนี้สำหรับรีวิวเนื้อหาที่ไม่ได้อยู่ใน Confluence")
+    if st.button("🚀 เริ่มการรีวิว (Direct Text)", key="btn_text", use_container_width=True):
+        if not spec_input:
+            st.error("กรุณาวางเนื้อหา Spec")
+        else:
+            review_mode = "orchestrated"
+            st.session_state["review_mode"] = "orchestrated"
+            st.session_state["active_url"] = ""
+            st.session_state["active_text"] = spec_input
+            st.session_state["show_dialog"] = True
 
-# Determine source
-spec_content = spec_input # Default to manual input if provided
+with tab3:
+    confluence_url_single = st.text_input("Confluence Page URL (Single Request)", placeholder="https://your-domain.atlassian.net/wiki/spaces/.../pages/12345", key="conf_url_3")
+    st.info("💡 โหมดนี้จะส่งคำขอเดียว (Single Request) โดยใช้ Prompt ที่ปรับแต่งให้กระชับ เพื่อความรวดเร็ว")
+    if st.button("⚡ เริ่มการรีวิว (Single Request)", key="btn_single", use_container_width=True):
+        if not confluence_url_single:
+            st.error("กรุณาระบุ Confluence Page URL")
+        else:
+            review_mode = "single"
+            st.session_state["review_mode"] = "single"
+            st.session_state["active_url"] = confluence_url_single
+            st.session_state["active_text"] = ""
+            st.session_state["show_dialog"] = True
+
+# Handle dialog trigger
+if st.session_state.get("show_dialog"):
+    # Clear the flag so it doesn't loop
+    st.session_state["show_dialog"] = False
+    
+    # Check dependencies
+    if not api_key:
+        st.error("Missing Gemini API Key!")
+    else:
+        # Call the dialog
+        conf_creds = (conf_url, conf_user, conf_token)
+        mode = st.session_state.get("review_mode", "orchestrated")
+        url = st.session_state.get("active_url", "")
+        text = st.session_state.get("active_text", "")
+        
+        # We need to call the dialog function.
+        show_review_dialog(api_key, model_name, url, text, conf_creds, mode)
 
 @st.dialog("⚙️ กระบวนการรีวิว (AI Spec Review)", width="large")
-def show_review_dialog(api_key, model_name, confluence_url, spec_content, conf_creds):
-    # Inject JS to prevent refresh and prevent backdrop click
+def show_review_dialog(api_key, model_name, confluence_url, spec_content, conf_creds, mode="orchestrated"):
+    # Inject JS (omitted for brevity in prompt but I should keep it)
     st.components.v1.html("""
         <script>
-            // 1. Prevent refresh
             window.parent.onbeforeunload = function(e) {
                 e.preventDefault();
                 e.returnValue = '';
             };
-            
-            // 2. Prevent closing dialog by clicking outside
             function blockOutsideClick(e) {
                 const dialog = window.parent.document.querySelector('div[role="dialog"]');
                 if (dialog && !dialog.contains(e.target)) {
@@ -350,7 +405,8 @@ def show_review_dialog(api_key, model_name, confluence_url, spec_content, conf_c
                 st.session_state["spec_metadata"] = {
                     "title": page_data["title"],
                     "version": page_data["version"],
-                    "page_id": extracted_id
+                    "page_id": extracted_id,
+                    "url": confluence_url
                 }
                 st.success(f"ดึงข้อมูลสำเร็จ: {page_data['title']}")
 
@@ -365,70 +421,47 @@ def show_review_dialog(api_key, model_name, confluence_url, spec_content, conf_c
                 page_id = match.group(1)
 
         orchestrator.set_page_id(page_id)
-        orchestrator.set_prompts(st.session_state["prompts"])
-        orchestrator.set_rubrics(st.session_state["rubrics"])
+        
+        if mode == "orchestrated":
+            orchestrator.set_prompts(st.session_state["prompts"])
+            orchestrator.set_rubrics(st.session_state["rubrics"])
 
-        loader_placeholder = st.empty()
-        loader_placeholder.markdown("""
-            <style>
-            .custom-loader-container {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                padding: 15px 0 25px 0;
-            }
-            .custom-loader {
-                width: 55px;
-                height: 55px;
-                border: 5px solid #e2e8f0;
-                border-bottom-color: #4f46e5;
-                border-radius: 50%;
-                display: inline-block;
-                box-sizing: border-box;
-                animation: rotation 1s linear infinite;
-            }
-            @keyframes rotation {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-            .loader-text {
-                margin-top: 15px;
-                color: #4f46e5;
-                font-weight: 600;
-                font-size: 1.1rem;
-                animation: pulse 1.5s ease-in-out infinite;
-            }
-            @keyframes pulse {
-                0% { opacity: 0.6; }
-                50% { opacity: 1; }
-                100% { opacity: 0.6; }
-            }
-            </style>
-            <div class="custom-loader-container">
-                <span class="custom-loader"></span>
-                <div class="loader-text">AI is analyzing your spec...</div>
-            </div>
-        """, unsafe_allow_html=True)
+            loader_placeholder = st.empty()
+            loader_placeholder.markdown("""
+                <div class="custom-loader-container">
+                    <span class="custom-loader"></span>
+                    <div class="loader-text">Orchestrating multi-agent review...</div>
+                </div>
+            """, unsafe_allow_html=True)
 
-        with st.status("🚀 กำลังเริ่มต้นกระบวนการรีวิว...", expanded=True) as status:
-            def update_progress(step, msg, detail=None):
-                status.update(label=f"⏳ Step {step}/5: {msg}", state="running")
-                st.markdown(f"**Step {step}:** {msg}")
-                if detail:
-                    with st.expander("รายละเอียดเบื้องต้น (Preview)"):
-                        if isinstance(detail, dict) or isinstance(detail, list):
-                            st.json(detail)
-                        else:
-                            st.write(detail)
+            with st.status("🚀 กำลังเริ่มต้นกระบวนการรีวิวแบบละเอียด...", expanded=True) as status:
+                def update_progress(step, msg, detail=None):
+                    status.update(label=f"⏳ Step {step}/5: {msg}", state="running")
+                    st.markdown(f"**Step {step}:** {msg}")
+                
+                metadata = st.session_state.get("spec_metadata", {})
+                result = orchestrator.run_review(spec_content, progress_callback=update_progress, metadata=metadata)
+                status.update(label="✅ การรีวิวเสร็จสมบูรณ์!", state="complete", expanded=False)
+        else:
+            # Single Request mode
+            loader_placeholder = st.empty()
+            loader_placeholder.markdown("""
+                <div class="custom-loader-container">
+                    <span class="custom-loader"></span>
+                    <div class="loader-text">Single request (Rovo Style) review...</div>
+                </div>
+            """, unsafe_allow_html=True)
             
-            metadata = st.session_state.get("spec_metadata", {})
-            result = orchestrator.run_review(spec_content, progress_callback=update_progress, metadata=metadata)
-            status.update(label="✅ การรีวิวเสร็จสมบูรณ์!", state="complete", expanded=False)
-            
+            with st.spinner("⚡ กำลังประมวลผลคำขอเดียว (Single Request)..."):
+                metadata = st.session_state.get("spec_metadata", {})
+                optimized_prompt = st.session_state.get("single_prompt", "")
+                result = orchestrator.run_single_request_review(spec_content, optimized_prompt, metadata=metadata)
+                
+            st.success("⚡ รีวิวเสร็จสิ้น (Single Request)")
+
         loader_placeholder.empty()
-
         st.session_state["review_result"] = result
+        st.session_state["review_mode_result"] = mode
 
         # Save log if in dev environment
         app_env = os.getenv("APP_ENV", "dev")
@@ -437,24 +470,21 @@ def show_review_dialog(api_key, model_name, confluence_url, spec_content, conf_c
             timestamp = datetime.datetime.now().strftime("%d%m%Y-%H%M%S")
             log_filename = f"app-log/review-{timestamp}"
             with open(log_filename, "w", encoding="utf-8") as f:
-                f.write(f"# Review Session Log - {timestamp}\n\n")
-                f.write("## Input Spec Content:\n")
-                f.write(spec_content[:500] + "...\n\n")
-                f.write("## Review Result:\n")
-                f.write(json.dumps(result, indent=2, ensure_ascii=False))
-            st.success(f"การรีวิวเสร็จสมบูรณ์! กำลังปิดหน้าต่างเพื่อแสดงผลลัพธ์... (Log: {log_filename})")
-        else:
-            st.success(f"การรีวิวเสร็จสมบูรณ์! กำลังปิดหน้าต่างเพื่อแสดงผลลัพธ์...")
+                f.write(f"# Review Session Log ({mode}) - {timestamp}\n\n")
+                if isinstance(result, str):
+                    f.write(result)
+                else:
+                    f.write(json.dumps(result, indent=2, ensure_ascii=False))
+            st.success(f"บันทึก Log เรียบร้อย: {log_filename}")
+        
         import time
-        time.sleep(2)
+        time.sleep(1)
         st.rerun()
 
     except Exception as e:
         st.error(f"เกิดข้อผิดพลาดระหว่างการรีวิว: {e}")
-        if "orchestrator" in locals() and orchestrator.last_response:
-            with st.expander("🔍 ดู Raw LLM Response (เพื่อตรวจสอบ Error)"):
-                st.code(orchestrator.last_response, language="json")
-        print(f"\n[ERROR] Review failed: {e}")
+            
+        loader_placeholder.empty()
 
     finally:
         # Clear the unload blocker and click blocker
@@ -471,51 +501,54 @@ def show_review_dialog(api_key, model_name, confluence_url, spec_content, conf_c
             </script>
         """, height=0)
 
-if st.button("🚀 เริ่มการรีวิว", disabled=not api_key or (not spec_input and not confluence_url)):
-    conf_creds = (conf_url, conf_user, conf_token)
-    show_review_dialog(api_key, model_name, confluence_url, spec_input, conf_creds)
-
-
 # Display Results
 if "review_result" in st.session_state:
     res = st.session_state["review_result"]
+    mode = st.session_state.get("review_mode_result", "orchestrated")
+    
+    if mode == "single":
+        st.markdown('<div class="genesis-card">', unsafe_allow_html=True)
+        st.header("⚡ Single Request Review Result")
+        st.markdown(res)
+        st.markdown('</div>', unsafe_allow_html=True)
+    else:
+        # 1. Summary
+        st.markdown('<div class="genesis-card">', unsafe_allow_html=True)
+        st.header("1. Summary")
+        summary = res.get("summary", {})
+        col1, col2 = st.columns(2)
+        with col1:
+            st.write(f"**ประเภทเอกสาร:** {summary.get('document_type')}")
+            st.write(f"**ชื่อเอกสาร:** {summary.get('document_name')}")
+        with col2:
+            st.write(f"**Version:** {summary.get('version')}")
+            st.write(f"**การประเมินภาพรวม:** {summary.get('overall_assessment')}")
 
-    # 1. Summary
-    st.markdown('<div class="genesis-card">', unsafe_allow_html=True)
-    st.header("1. Summary")
-    summary = res.get("summary", {})
-    col1, col2 = st.columns(2)
-    with col1:
-        st.write(f"**ประเภทเอกสาร:** {summary.get('document_type')}")
-        st.write(f"**ชื่อเอกสาร:** {summary.get('document_name')}")
-    with col2:
-        st.write(f"**Version:** {summary.get('version')}")
-        st.write(f"**การประเมินภาพรวม:** {summary.get('overall_assessment')}")
+        st.subheader("จุดเด่น (Highlights)")
+        for h in summary.get("highlights", []):
+            st.markdown(f"- {h}")
 
-    st.subheader("จุดเด่น (Highlights)")
-    for h in summary.get("highlights", []):
-        st.markdown(f"- {h}")
+        st.subheader("จุดที่ควรปรับปรุง (Improvements)")
+        for i in summary.get("improvements", []):
+            st.markdown(f"- {i}")
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    st.subheader("จุดที่ควรปรับปรุง (Improvements)")
-    for i in summary.get("improvements", []):
-        st.markdown(f"- {i}")
-    st.markdown('</div>', unsafe_allow_html=True)
+        # 2. Topic Review
+        st.markdown('<div class="genesis-card">', unsafe_allow_html=True)
+        st.header("2. Topic Review")
+        import pandas as pd
+        topic_df = pd.DataFrame(res.get("topic_review_table", []))
+        if not topic_df.empty:
+            st.table(topic_df)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    # 2. Topic Review
-    st.markdown('<div class="genesis-card">', unsafe_allow_html=True)
-    st.header("2. Topic Review")
-    topic_df = pd.DataFrame(res.get("topic_review_table", []))
-    if not topic_df.empty:
-        st.table(topic_df)
-    st.markdown('</div>', unsafe_allow_html=True)
+        # 3. Scenario Coverage
+        st.markdown('<div class="genesis-card">', unsafe_allow_html=True)
+        st.header("3. Scenario Coverage")
+        scenario_df = pd.DataFrame(res.get("scenario_coverage_table", []))
+        if not scenario_df.empty:
+            st.table(scenario_df)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    # 3. Scenario Coverage
-    st.markdown('<div class="genesis-card">', unsafe_allow_html=True)
-    st.header("3. Scenario Coverage")
-    scenario_df = pd.DataFrame(res.get("scenario_coverage_table", []))
-    if not scenario_df.empty:
-        st.table(scenario_df)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown("---")
-    st.caption(res.get("signature", "generated by AI Spec Review"))
+        st.markdown("---")
+        st.caption(res.get("signature", "generated by AI Spec Review"))

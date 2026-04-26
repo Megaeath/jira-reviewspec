@@ -189,3 +189,31 @@ class SpecReviewOrchestrator:
         if progress_callback: progress_callback(5, "เสร็จสิ้นกระบวนการทั้งหมด", None)
 
         return final_data
+    def run_single_request_review(self, spec_text: str, optimized_prompt: str, metadata: dict = None) -> str:
+        self.save_raw_spec(spec_text, metadata)
+        
+        # Build full prompt
+        full_prompt = optimized_prompt
+        if metadata:
+            full_prompt = full_prompt.replace("{{title}}", metadata.get("title", "Spec Review"))
+            full_prompt = full_prompt.replace("{{version}}", metadata.get("version", "N/A"))
+            full_prompt = full_prompt.replace("{{url}}", metadata.get("url", "N/A"))
+        
+        full_prompt += f"\n\n--- CONTENT TO REVIEW ---\n{spec_text}"
+        
+        print(f"\n--- Single Request Prompt sent to LLM ---\n{full_prompt[:500]}...\n")
+        
+        response = self.model.generate_content(full_prompt)
+        text = response.text.strip()
+        
+        token_info = None
+        if hasattr(response, "usage_metadata") and response.usage_metadata:
+            usage = response.usage_metadata
+            token_info = {
+                "prompt_tokens": getattr(usage, "prompt_token_count", 0),
+                "completion_tokens": getattr(usage, "candidates_token_count", 0),
+                "total_tokens": getattr(usage, "total_token_count", 0),
+            }
+            
+        self._save_step_log("single-request", full_prompt, text, token_info)
+        return text
