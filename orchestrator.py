@@ -16,6 +16,11 @@ class SpecReviewOrchestrator:
         self.last_response = ""
         self.page_id = "manual"
         self.session_timestamp = datetime.now().strftime("%y%m%d-%H%M%S")
+        self.total_token_usage = {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0
+        }
 
     def set_page_id(self, page_id: str):
         self.page_id = page_id
@@ -73,6 +78,10 @@ class SpecReviewOrchestrator:
                 "completion_tokens": getattr(usage, "candidates_token_count", 0),
                 "total_tokens": getattr(usage, "total_token_count", 0),
             }
+            # Track total usage
+            self.total_token_usage["prompt_tokens"] += token_info["prompt_tokens"]
+            self.total_token_usage["completion_tokens"] += token_info["completion_tokens"]
+            self.total_token_usage["total_tokens"] += token_info["total_tokens"]
 
         print(f"--- Raw LLM Response ({agent_name}): {text[:500]}...")
 
@@ -107,6 +116,9 @@ class SpecReviewOrchestrator:
             text = text[start_idx : end_idx + 1]
 
         return text.strip()
+
+    def get_token_usage(self) -> Dict[str, int]:
+        return self.total_token_usage
 
     def _parse_json(self, json_string: str) -> Dict[str, Any]:
         try:
@@ -189,31 +201,19 @@ class SpecReviewOrchestrator:
         if progress_callback: progress_callback(5, "เสร็จสิ้นกระบวนการทั้งหมด", None)
 
         return final_data
-    def run_single_request_review(self, spec_text: str, optimized_prompt: str, metadata: dict = None) -> str:
+    def run_single_request_review(self, spec_text: str, optimized_prompt: str, metadata: dict = None) -> Dict[str, Any]:
         self.save_raw_spec(spec_text, metadata)
         
-        # Build full prompt
-        full_prompt = optimized_prompt
-        if metadata:
-            full_prompt = full_prompt.replace("{{title}}", metadata.get("title", "Spec Review"))
-            full_prompt = full_prompt.replace("{{version}}", metadata.get("version", "N/A"))
-            full_prompt = full_prompt.replace("{{url}}", metadata.get("url", "N/A"))
+        # Build input data for template replacement
+        input_data = {
+            "title": metadata.get("title", "Spec Review") if metadata else "Spec Review",
+            "version": metadata.get("version", "N/A") if metadata else "N/A",
+            "url": metadata.get("url", "N/A") if metadata else "N/A",
+            "spec_text": spec_text
+        }
         
-        full_prompt += f"\n\n--- CONTENT TO REVIEW ---\n{spec_text}"
+        # Use _call_llm for consistent logging and JSON extraction
+        raw_result = self._call_llm(optimized_prompt, "single-request", input_data)
         
-        print(f"\n--- Single Request Prompt sent to LLM ---\n{full_prompt[:500]}...\n")
-        
-        response = self.model.generate_content(full_prompt)
-        text = response.text.strip()
-        
-        token_info = None
-        if hasattr(response, "usage_metadata") and response.usage_metadata:
-            usage = response.usage_metadata
-            token_info = {
-                "prompt_tokens": getattr(usage, "prompt_token_count", 0),
-                "completion_tokens": getattr(usage, "candidates_token_count", 0),
-                "total_tokens": getattr(usage, "total_token_count", 0),
-            }
-            
-        self._save_step_log("single-request", full_prompt, text, token_info)
-        return text
+        # Parse and return as dictionary
+        return self._parse_json(raw_result)

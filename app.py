@@ -475,13 +475,28 @@ def show_review_dialog(api_key, model_name, confluence_url, spec_content, conf_c
         if app_env == "dev":
             os.makedirs("app-log", exist_ok=True)
             timestamp = datetime.datetime.now().strftime("%d%m%Y-%H%M%S")
-            log_filename = f"app-log/review-{timestamp}"
+            log_filename = f"app-log/review-{mode}-{timestamp}.md"
+            
+            # Get token usage from orchestrator
+            token_usage = orchestrator.get_token_usage()
+            
             with open(log_filename, "w", encoding="utf-8") as f:
                 f.write(f"# Review Session Log ({mode}) - {timestamp}\n\n")
+                
+                f.write("## 1. Input Spec Content (Raw)\n")
+                f.write(f"```text\n{spec_content}\n```\n\n")
+                
+                f.write("## 2. Token Usage Summary\n")
+                f.write(f"- Prompt Tokens: {token_usage.get('prompt_tokens', 0)}\n")
+                f.write(f"- Completion Tokens: {token_usage.get('completion_tokens', 0)}\n")
+                f.write(f"- **Total Tokens:** {token_usage.get('total_tokens', 0)}\n\n")
+                
+                f.write("## 3. Review Result (JSON)\n")
                 if isinstance(result, str):
                     f.write(result)
                 else:
-                    f.write(json.dumps(result, indent=2, ensure_ascii=False))
+                    f.write(f"```json\n{json.dumps(result, indent=2, ensure_ascii=False)}\n```")
+            
             st.success(f"บันทึก Log เรียบร้อย: {log_filename}")
         
         import time
@@ -533,12 +548,12 @@ if "review_result" in st.session_state:
     mode = st.session_state.get("review_mode_result", "orchestrated")
     
     if mode == "single":
-        st.markdown('<div class="genesis-card">', unsafe_allow_html=True)
-        st.header("⚡ Single Request Review Result")
-        st.markdown(res)
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.subheader("⚡ Single Request (Rovo Style) Result")
     else:
-        # 1. Summary
+        st.subheader("🔄 Orchestrated Review Result")
+
+    # Unified structured display
+    if isinstance(res, dict):
         st.markdown('<div class="genesis-card">', unsafe_allow_html=True)
         st.header("1. Summary")
         summary = res.get("summary", {})
