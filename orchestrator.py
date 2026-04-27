@@ -88,32 +88,36 @@ class SpecReviewOrchestrator:
         # Save step log
         self._save_step_log(agent_name, full_prompt, text, token_info)
 
-        # Robust JSON extraction: Find the first '{' or '[' and last '}' or ']'
+        # Robust JSON extraction: Find the outermost { } or [ ]
         import re
         text = text.strip()
         # Remove markdown code blocks if present
         text = re.sub(r'^```(?:json)?\s*', '', text, flags=re.IGNORECASE | re.MULTILINE)
         text = re.sub(r'\s*```$', '', text, flags=re.MULTILINE)
         
+        # We want to find the largest substring that starts with { or [ and ends with } or ]
+        # BUT we should be careful if there are multiple objects.
+        # Usually, the LLM returns one JSON object.
+        
         start_brace = text.find("{")
         start_bracket = text.find("[")
-        end_brace = text.rfind("}")
-        end_bracket = text.rfind("]")
         
-        start_idx = -1
+        # Decide where to start: if both exist, pick the one that appears first
         if start_brace != -1 and start_bracket != -1:
             start_idx = min(start_brace, start_bracket)
         else:
             start_idx = max(start_brace, start_bracket)
             
-        end_idx = -1
-        if end_brace != -1 and end_bracket != -1:
-            end_idx = max(end_brace, end_bracket)
-        else:
-            end_idx = max(end_brace, end_bracket)
-            
-        if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
-            text = text[start_idx : end_idx + 1]
+        if start_idx != -1:
+            # If we started with {, we must end with }
+            # If we started with [, we must end with ]
+            if text[start_idx] == "{":
+                end_idx = text.rfind("}")
+            else:
+                end_idx = text.rfind("]")
+                
+            if end_idx != -1 and end_idx > start_idx:
+                text = text[start_idx : end_idx + 1]
 
         return text.strip()
 

@@ -341,6 +341,8 @@ with tab1:
             st.session_state["review_mode"] = "orchestrated"
             st.session_state["active_url"] = confluence_url
             st.session_state["active_text"] = ""
+            if "review_result" in st.session_state:
+                del st.session_state["review_result"]
             st.session_state["show_dialog"] = True
 
 with tab2:
@@ -354,6 +356,8 @@ with tab2:
             st.session_state["review_mode"] = "orchestrated"
             st.session_state["active_url"] = ""
             st.session_state["active_text"] = spec_input
+            if "review_result" in st.session_state:
+                del st.session_state["review_result"]
             st.session_state["show_dialog"] = True
 
 with tab3:
@@ -367,6 +371,8 @@ with tab3:
             st.session_state["review_mode"] = "single"
             st.session_state["active_url"] = confluence_url_single
             st.session_state["active_text"] = ""
+            if "review_result" in st.session_state:
+                del st.session_state["review_result"]
             st.session_state["show_dialog"] = True
 
 @st.dialog("⚙️ กระบวนการรีวิว (AI Spec Review)", width="large")
@@ -469,6 +475,10 @@ def show_review_dialog(api_key, model_name, confluence_url, spec_content, conf_c
         loader_placeholder.empty()
         st.session_state["review_result"] = result
         st.session_state["review_mode_result"] = mode
+        
+        # Log to terminal for cloud debugging
+        print(f"--- Review finished for mode: {mode}")
+        print(f"--- Result type: {type(result)}")
 
         # Save log if in dev environment
         app_env = os.getenv("APP_ENV", "dev")
@@ -554,42 +564,66 @@ if "review_result" in st.session_state:
 
     # Unified structured display
     if isinstance(res, dict):
+        # 1. Summary
         st.markdown('<div class="genesis-card">', unsafe_allow_html=True)
         st.header("1. Summary")
         summary = res.get("summary", {})
-        col1, col2 = st.columns(2)
-        with col1:
-            st.write(f"**ประเภทเอกสาร:** {summary.get('document_type')}")
-            st.write(f"**ชื่อเอกสาร:** {summary.get('document_name')}")
-        with col2:
-            st.write(f"**Version:** {summary.get('version')}")
-            st.write(f"**การประเมินภาพรวม:** {summary.get('overall_assessment')}")
+        if isinstance(summary, dict):
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write(f"**ประเภทเอกสาร:** {summary.get('document_type', 'N/A')}")
+                st.write(f"**ชื่อเอกสาร:** {summary.get('document_name', 'N/A')}")
+            with col2:
+                st.write(f"**Version:** {summary.get('version', 'N/A')}")
+                st.write(f"**การประเมินภาพรวม:** {summary.get('overall_assessment', 'N/A')}")
 
-        st.subheader("จุดเด่น (Highlights)")
-        for h in summary.get("highlights", []):
-            st.markdown(f"- {h}")
+            st.subheader("จุดเด่น (Highlights)")
+            highlights = summary.get("highlights", [])
+            if isinstance(highlights, list):
+                for h in highlights:
+                    st.markdown(f"- {h}")
+            else:
+                st.write(highlights)
 
-        st.subheader("จุดที่ควรปรับปรุง (Improvements)")
-        for i in summary.get("improvements", []):
-            st.markdown(f"- {i}")
+            st.subheader("จุดที่ควรปรับปรุง (Improvements)")
+            improvements = summary.get("improvements", [])
+            if isinstance(improvements, list):
+                for i in improvements:
+                    st.markdown(f"- {i}")
+            else:
+                st.write(improvements)
+        else:
+            st.write(summary)
         st.markdown('</div>', unsafe_allow_html=True)
 
         # 2. Topic Review
         st.markdown('<div class="genesis-card">', unsafe_allow_html=True)
         st.header("2. Topic Review")
-        import pandas as pd
-        topic_df = pd.DataFrame(res.get("topic_review_table", []))
-        if not topic_df.empty:
+        topic_data = res.get("topic_review_table", [])
+        if isinstance(topic_data, list) and len(topic_data) > 0:
+            topic_df = pd.DataFrame(topic_data)
             st.table(topic_df)
+        else:
+            st.info("ไม่พบข้อมูลการรีวิวรายหัวข้อ")
         st.markdown('</div>', unsafe_allow_html=True)
 
         # 3. Scenario Coverage
         st.markdown('<div class="genesis-card">', unsafe_allow_html=True)
         st.header("3. Scenario Coverage")
-        scenario_df = pd.DataFrame(res.get("scenario_coverage_table", []))
-        if not scenario_df.empty:
+        scenario_data = res.get("scenario_coverage_table", [])
+        if isinstance(scenario_data, list) and len(scenario_data) > 0:
+            scenario_df = pd.DataFrame(scenario_data)
             st.table(scenario_df)
+        else:
+            st.info("ไม่พบข้อมูล Scenario Coverage")
         st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown("---")
         st.caption(res.get("signature", "generated by AI Spec Review"))
+    else:
+        st.warning("⚠️ ผลลัพธ์ไม่ได้อยู่ในรูปแบบ Structured JSON ที่คาดหวัง")
+        st.text(str(res))
+
+    # Raw Output for debugging
+    with st.expander("🔍 ดูผลลัพธ์ดิบ (Raw JSON / Debug)"):
+        st.json(res)
